@@ -26,7 +26,7 @@ let mouseDown = false
 let mouseInitPos = {x:0, y:0}
 let mouseStopPos = {x:0, y:0}
 let shots = 0;
-let level = 0; 
+let level = 1; 
 
 function get_level(level){
     switch(level){
@@ -129,7 +129,6 @@ function get_level(level){
             break;
     }
     won = false;
-    shots = 0;
     document.getElementById("shots").innerText = `Shots: ${shots}`;
     document.getElementById("level").innerText = `Level: ${level}`;
     document.getElementById("next-level").style.display = 'none';
@@ -439,14 +438,11 @@ function render(){
 
 function main(){
     render();
-    if(!won){
-        moveBall();
-        checkWin();
-    }
-    else{
+    moveBall();
+    checkWin();
+    if(won){
         document.getElementById("next-level").style.display = 'block';
     }
-    
 }
 
 canvas.addEventListener("mousedown",(e)=>{
@@ -464,7 +460,7 @@ canvas.addEventListener("mousemove", (e)=>{
 })
 
 canvas.addEventListener("mouseup", (e)=>{
-    if (mouseDown){
+    if (mouseDown && !won){
         let rect = canvas.getBoundingClientRect();
         mouseStopPos = {x: e.clientX - rect.left, y: e.clientY - rect.top};
 
