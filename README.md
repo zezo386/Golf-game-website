@@ -22,6 +22,12 @@ this game contains 5 levels and a final level with a thanks message
 
 this game is made using only html, css, javascript
 
+## How To Clone
+
+just use this simple command
+
+`git clone https://github.com/zezo386/Golf-game-website`
+
 ## Author
 
 this Project is made by Ziad Elhusiny The GOAT of programming
