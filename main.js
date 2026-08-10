@@ -26,7 +26,7 @@ let mouseDown = false
 let mouseInitPos = {x:0, y:0}
 let mouseStopPos = {x:0, y:0}
 let shots = 0;
-let level = 1; 
+let level = 0; 
 
 function get_level(level){
     switch(level){
@@ -40,9 +40,99 @@ function get_level(level){
             GolfBall.velocityX = 0;
             GolfBall.velocityY = 0;
             break;
-        
-            
+        case 2:
+            ScoreHole = {x: 700, y: 50};
+            walls = [
+                {x: 200, y: 150, width: 100, height: 200, angle: 0},
+                {x: 500, y: 150, width: 100, height: 200, angle: 0}
+            ];
+            GolfBall.x = CenterX;
+            GolfBall.y = CenterY;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
+        case 3:
+            ScoreHole = {x: 50, y: 50};
+            walls = [
+                {x: 350, y: 150, width: 50, height: 200, angle: 0.5},
+                {x: 450, y: 150, width: 50, height: 200, angle: -0.5}
+            ]
+            GolfBall.x = 700;
+            GolfBall.y = 250;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
+        case 4:
+            ScoreHole = {x: 700, y: 250}
+            walls = [
+                {x: 200, y: 100, width: 150, height: 50, angle: 0.3},
+                {x: 200, y: 200, width: 150, height: 50, angle: -0.3},
+                {x: 500, y: 100, width: 150, height: 50, angle: -0.3},
+                {x: 500, y: 200, width: 150, height: 50, angle: 0.3}
+            ]
+            GolfBall.x = 50;
+            GolfBall.y = 250;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
+        case 5:
+            ScoreHole = {x: 50, y: 275};
+            walls = [
+                {x: 200, y: 50, width: 400, height: 30, angle: 0},
+                {x: 200, y: 250, width: 400, height: 30, angle: 0},
+                {x: 200, y: 150, width: 30, height: 200, angle: 0.2},
+                {x: 500, y: 150, width: 30, height: 200, angle: -0.2}
+            ]
+            GolfBall.x = 700;
+            GolfBall.y = 150;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
+        default:
+            ScoreHole = {x: 690, y: 140}
+            walls = [
+                // T - at x: 20-60
+                {x: 40, y: 70, width: 15, height: 100, angle: 0},      // vertical line
+                {x: 40, y: 25, width: 60, height: 15, angle: 0},       // top bar
+                
+                // H - at x: 80-130
+                {x: 90, y: 70, width: 15, height: 100, angle: 0},      // left vertical
+                {x: 120, y: 70, width: 15, height: 100, angle: 0},     // right vertical
+                {x: 105, y: 70, width: 30, height: 15, angle: 0},      // middle bar
+                
+                // A - at x: 150-200
+                {x: 165, y: 70, width: 15, height: 80, angle: 0.35},    // left leg
+                {x: 190, y: 70, width: 15, height: 80, angle: -0.35},   // right leg
+                {x: 175, y: 80, width: 30, height: 15, angle: 0},      // middle bar
+                
+                // N - at x: 220-280
+                {x: 245, y: 60, width: 15, height: 80, angle: 0},     // left vertical
+                {x: 265, y: 60, width: 15, height: 80, angle: -0.5},   // diagonal
+                {x: 285, y: 60, width: 15, height: 80, angle: 0},     // right vertical
+                
+                // K - at x: 300-360
+                {x: 320, y: 60, width: 15, height: 100, angle: 0},     // left vertical
+                {x: 340, y: 40, width: 50, height: 15, angle: -0.7},    // top diagonal
+                {x: 340, y: 85, width: 50, height: 15, angle: 0.7},   // bottom diagonal
+                
+                // S - at x: 380-440
+                {x: 410, y: 20, width: 60, height: 15, angle: 0},      // top bar
+                {x: 410, y: 60, width: 60, height: 15, angle: 0},      // middle bar
+                {x: 410, y: 100, width: 60, height: 15, angle: 0},     // bottom bar
+                {x: 385, y: 40, width: 15, height: 55, angle: 0},      // left vertical
+                {x: 435, y: 80, width: 15, height: 55, angle: 0}       // right vertical
+            ]
+            GolfBall.x = 50;
+            GolfBall.y = 250;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
     }
+    won = false;
+    shots = 0;
+    document.getElementById("shots").innerText = `Shots: ${shots}`;
+    document.getElementById("level").innerText = `Level: ${level}`;
+    document.getElementById("next-level").style.display = 'none';
 }
 
 function calcShot(){
@@ -65,7 +155,7 @@ function moveBall(){
 
     if (Math.abs(GolfBall.velocityX) < 1 && Math.abs(GolfBall.velocityY) < 1){
         GolfBall.velocityX = 0;
-        GolfBall.velocityY = 0
+        GolfBall.velocityY = 0;
     }
 
 
@@ -348,10 +438,13 @@ function render(){
 }
 
 function main(){
+    render();
     if(!won){
-        render();
         moveBall();
         checkWin();
+    }
+    else{
+        document.getElementById("next-level").style.display = 'block';
     }
     
 }
@@ -380,6 +473,11 @@ canvas.addEventListener("mouseup", (e)=>{
         shots += 1;
         document.getElementById("shots").innerText = `Shots: ${shots}`
     }
+})
+
+document.getElementById("next-level").addEventListener("click",(e)=>{
+    level += 1;
+    get_level(level);
 })
 
 document.addEventListener("DOMContentLoaded", (e)=> {

@@ -28,3 +28,15 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+.stats span, .stats button{
+    border: none;
+    background-color: darkturquoise;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+.next-level-btn {
+    display: none;
+
+}
