@@ -431,6 +431,16 @@ function render(){
             context.fill();
             context.lineWidth = 5;
 
+            context.strokeStyle = 'black';
+
+            context.beginPath();
+
+            context.moveTo(mouseInitPos.x, mouseInitPos.y);
+
+            context.lineTo(mouseStopPos.x, mouseStopPos.y);
+
+            context.stroke();
+
         }
 
     }
