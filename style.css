@@ -3,16 +3,28 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+body {
+    align-items: center;
+    justify-content: center;
+}
+
 .container {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    margin-top: 30px;
     justify-content: center;
     align-items: center;
 }
 
 .canvas {
-    border: 3px solid black;
-    margin: 30px;
-    max-width: calc(100vw - 60px);
+    border: 1px solid black;
+}
+
+.stats {
+    display: flex;
+    flex-direction: row;
+    gap: 25px;
+    justify-content: center;
+    align-items: center;
 }

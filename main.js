@@ -3,6 +3,7 @@ const BlocksX = 750;
 const BlocksY = 300;
 canvas.width = document.getElementById("CanvasContainer").offsetWidth - 60;
 canvas.height = canvas.width * (BlocksY/BlocksX);
+const PixelsPerBlock = canvas.width/BlocksX;
 const CenterX = Math.ceil(canvas.width / 2);
 const CenterY = Math.ceil(canvas.height / 2);
 
@@ -13,9 +14,14 @@ let GolfBall = {
     velocityY: 0
 }
 
+let ScoreHole = {
+    x: 50,
+    y: 240
+}
+
 let walls = [];
 
-let won = 0;
+let won = false;
 let mouseDown = false
 let mouseInitPos = {x:0, y:0}
 let mouseStopPos = {x:0, y:0}
@@ -25,7 +31,17 @@ let level = 1;
 function get_level(level){
     switch(level){
         case 1: 
-            walls = [{'TopLeft':(250,100),'TopRight':(500,100),'BottomLeft':(250,200),'BottomRight':(500,200)}]
+            ScoreHole = {x: 50, y: 240}
+            walls = [
+                {x: 200, y: 100, width: 250, height: 100, angle: 0}
+            ]
+            GolfBall.x = CenterX;
+            GolfBall.y = CenterY;
+            GolfBall.velocityX = 0;
+            GolfBall.velocityY = 0;
+            break;
+        
+            
     }
 }
 
@@ -33,7 +49,7 @@ function calcShot(){
     let dx = mouseInitPos.x - mouseStopPos.x;
     let dy = mouseInitPos.y - mouseStopPos.y;
 
-    let drag = 40;
+    let drag = 30;
     let velocity = {x: dx/drag, y: dy/drag};
 
     GolfBall.velocityX = velocity.x;
@@ -49,39 +65,270 @@ function moveBall(){
 
     if (Math.abs(GolfBall.velocityX) < 1 && Math.abs(GolfBall.velocityY) < 1){
         GolfBall.velocityX = 0;
-        GolfBall.velocityY = 0;
+        GolfBall.velocityY = 0
     }
 
 
     checkBorderCollision();
+
+    for (let wall of walls){
+        resolveWallCollision(wall);
+    }
 }
 
 function checkBorderCollision(){
     if (GolfBall.x - 16 < 0 || GolfBall.x + 16 > canvas.width){
-        GolfBall.velocityX = -GolfBall.velocityX
+        GolfBall.velocityX = -GolfBall.velocityX;
+        GolfBall.x = Math.max(16, Math.min(canvas.width - 16, GolfBall.x));
     }
     if (GolfBall.y - 16 < 0 || GolfBall.y + 16 > canvas.height){
         GolfBall.velocityY = -GolfBall.velocityY;
+        GolfBall.y = Math.max(16, Math.min(canvas.height - 16, GolfBall.y));
     }
 }
 
+function rotate_point(wall, point, theta){
+    let x = point.x - wall.x*PixelsPerBlock;
+    let y = point.y - wall.y*PixelsPerBlock;
+
+    let xd = (x * Math.cos(theta)) - (y * Math.sin(theta));
+    let yd = (x * Math.sin(theta)) + (y * Math.cos(theta));
+
+    xd += wall.x*PixelsPerBlock;
+    yd += wall.y*PixelsPerBlock;
+
+    return {x: xd, y: yd};
+}
+
+function checkWallCollision(wall){
+    let points = [
+        {x: (wall.x-(wall.width/2))*PixelsPerBlock, y: (wall.y-(wall.height/2))*PixelsPerBlock},
+        {x: (wall.x-(wall.width/2))*PixelsPerBlock, y: (wall.y+(wall.height/2))*PixelsPerBlock},
+        {x: (wall.x+(wall.width/2))*PixelsPerBlock, y: (wall.y+(wall.height/2))*PixelsPerBlock},
+        {x: (wall.x+(wall.width/2))*PixelsPerBlock, y: (wall.y-(wall.height/2))*PixelsPerBlock}
+    ]
+
+    for (let i = 0;i < points.length;i++){
+        points[i] = rotate_point(wall,points[i],wall.angle)
+    }
+
+    let collision = false;
+    let normalX = 0;
+    let normalY = 0;
+    let overlap = Infinity;
+
+    for (let i = 0;i < points.length;i++){
+        let point1 = points[i];
+        let point2 = points[(i+1)%points.length];
+
+        let edgeX = point2.x - point1.x;
+        let edgeY = point2.y - point1.y;
+        
+        let toCircleX = GolfBall.x - point1.x;
+        let toCircleY = GolfBall.y - point1.y;
+
+        let edgeSq = edgeX*edgeX + edgeY*edgeY;
+
+        if (edgeSq > 0){
+            let t = Math.max(0, Math.min(1, (toCircleX * edgeX + toCircleY * edgeY) / (edgeSq)));
+
+            let closestX = point1.x + t * edgeX;
+            let closestY = point1.y + t * edgeY;
+
+            let distX = GolfBall.x - closestX;
+            let distY = GolfBall.y - closestY
+
+            let distance = Math.sqrt(distX*distX + distY*distY);
+
+            if (distance < 10){
+                if (distance > 0){
+                    edgeNormalX = distX/distance;
+                    edgeNormalY = distY/distance;
+                    edgeOverlap = 10 - distance; 
+                }
+                else {
+                    edgeNormalX = -edgeY / Math.sqrt(edgeSq);
+                    edgeNormalY = edgeX / Math.sqrt(edgeSq);
+                    edgeOverlap = 10;
+                }
+                if (edgeOverlap < overlap){
+                    collision = true;
+                    overlap = edgeOverlap;
+                    normalX = edgeNormalX;
+                    normalY = edgeNormalY;
+                }
+            }
+        }
+
+    }
+
+    if (!collision && pointInPolygon({x: GolfBall.x, y: GolfBall.y},points)){
+        collision = true;
+        let minDist = Infinity;
+        let closestNormalX = 0;
+        let closestNormalY = 0;
+
+        for (let i = 0;i < points.length;i++){
+            let point1 = points[i];
+            let point2 = points[(i+1)%points.length];
+
+            let edgeX = point2.x - point1.x;
+            let edgeY = point2.y - point1.y;
+
+            let edgeLength = Math.sqrt(edgeX*edgeX + edgeY*edgeY);
+
+            if (edgeLength > 0){
+                let toCircleX = GolfBall.x - point1.x;
+                let toCircleY = GolfBall.y - point1.y;
+
+                let t = Math.max(0, Math.min(1, (toCircleX * edgeX + toCircleY * edgeY) / (edgeLength * edgeLength)));
+
+                let closestX = point1.x + t*edgeX;
+                let closestY = point1.y + t*edgeY;
+
+                let distX = GolfBall.x - closestX;
+                let distY = GolfBall.y - closestY;
+
+                let distance = Math.sqrt(distX*distX + distY*distY);
+
+                if (distance < minDist){
+                    minDist = distance;
+                    if (distance > 0){
+                        closestNormalX = distX / distance;
+                        closestNormalY = distY / distance;
+                    }
+                    else {
+                        closestNormalX = -edgeY/edgeLength
+                        closestNormalY = edgeX/edgeLength
+                    }
+                }
+            }
+        }
+        if (minDist < Infinity){
+            overlap = 10 + minDist;
+            normalX = closestNormalX;
+            normalY = closestNormalY;
+        }
+    }
+
+    return collision ? {collision: collision, normalX: normalX, normalY: normalY, overlap: overlap} : {collision: false};
+}
+
+
+
+function pointInPolygon(point, polygon){
+    let x = point.x;
+    let y = point.y;
+
+    let inside = false;
+
+    for (let i = 0;i < polygon.length;i++){
+        let x1 = polygon[i].x;
+        let y1 = polygon[i].y;
+        let x2 = polygon[(i+1)%polygon.length].x;
+        let y2 = polygon[(i+1)%polygon.length].y;
+
+        if ((x == x1 && y == y1) || (x == x2 && y == y2)){
+            return true;
+        }
+
+        if (y1 == y2 && y == y1 && Math.min(x1, x2) <= x && x <= Math.max(x1, x2)){
+            return true;
+        }
+
+        if ((y1 > y) !== (y2 > y)){
+            Xintersect = (x2 - x1) * (y - y1) / (y2 - y1) + x1;
+            if (Xintersect == x){
+                return true;
+            }
+
+            if (Xintersect > x){
+                inside = !inside;
+            }
+        }
+    }
+    return inside;
+}
+
+function checkWin(){
+    let dx = GolfBall.x - (ScoreHole.x*PixelsPerBlock);
+    let dy = GolfBall.y - (ScoreHole.y*PixelsPerBlock);
+
+    let distance = Math.sqrt((dx*dx) + (dy*dy));
+
+    if (distance <= 15){
+        won = true;
+    }
+}
+
+function renderWall(context,wall){
+    context.save()
+
+    context.translate(wall.x *PixelsPerBlock, wall.y * PixelsPerBlock);
+    context.rotate(wall.angle);
+
+    context.fillStyle = 'red';
+    context.fillRect(-(wall.width*PixelsPerBlock)/2, -(wall.height*PixelsPerBlock)/2, wall.width * PixelsPerBlock, wall.height * PixelsPerBlock);
+
+    context.restore();
+}
+
+function resolveWallCollision(wall){
+    let result = checkWallCollision(wall);
+
+    if (!result.collision)return;
+
+    let collision = result.collision;
+    let normalX = result.normalX;
+    let normalY = result.normalY;
+    let overlap = result.overlap;
+
+    
+
+    if (collision){
+        GolfBall.x = GolfBall.x + normalX * overlap;
+        GolfBall.y = GolfBall.y + normalY * overlap;
+
+        let dotProduct = GolfBall.velocityX * normalX + GolfBall.velocityY * normalY;
+
+        if (dotProduct < 0){
+            GolfBall.velocityX = GolfBall.velocityX - 2 * dotProduct * normalX;
+            GolfBall.velocityY = GolfBall.velocityY - 2 * dotProduct * normalY;
+        }
+        
+    }
+
+}
+
 function render(){
+    let context = canvas.getContext('2d');
     if (!won){
-        let context = canvas.getContext('2d');
         context.clearRect(0,0,canvas.width,canvas.height);
+
+        for(let wall of walls){
+            renderWall(context, wall);
+        }
+
         context.strokeStyle = 'Black';
         context.fillStyle = 'Black';
 
-        context.beginPath();
-        context.arc(GolfBall.x, GolfBall.y, 15, 0, 2 * Math.PI);
+        context.beginPath()
+        context.arc(ScoreHole.x * PixelsPerBlock, ScoreHole.y * PixelsPerBlock, 15, 0, Math.PI*2)
 
         context.fill()
 
-        context.lineWidth = 5;
-        context.stroke()
+        context.strokeStyle = 'Blue';
+        context.fillStyle = 'Blue';
+
+        context.beginPath();
+        context.arc(GolfBall.x, GolfBall.y, 10, 0, 2 * Math.PI);
+
+        context.fill();
+        
+        
+        
 
         if (mouseDown){
-            console.log("in it")
             context.fillStyle = 'Red';
             context.beginPath();
             context.arc(mouseInitPos.x, mouseInitPos.y, 5, 0, 2*Math.PI);
@@ -104,6 +351,7 @@ function main(){
     if(!won){
         render();
         moveBall();
+        checkWin();
     }
     
 }
@@ -134,4 +382,8 @@ canvas.addEventListener("mouseup", (e)=>{
     }
 })
 
-setInterval(main,10);
+document.addEventListener("DOMContentLoaded", (e)=> {
+    get_level(level);
+    setInterval(main,10);
+})
+
